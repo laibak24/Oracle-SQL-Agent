@@ -1,0 +1,254 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -448,
+        -96
+      ],
+      "id": "f03b69e9-1c78-4bba-a5e2-42296bf4ba07",
+      "name": "When chat message received",
+      "webhookId": "2c091acb-0e62-47e2-8c30-c6eb4998f481"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\nYou are a helpful assistant. Your job is to translate natural language questions into SQL queries that can be executed on a PostgreSQL database.\n\nYou will receive the user's question as plain text in the `\"chatInput\"` field of the incoming JSON. Do not expect structured formatting — just natural language.\n\nHere is the user’s question:  \n{{ $json[\"chatInput\"] }}\n\nYour task is to output only a valid SQL query using PostgreSQL syntax. Do not include any explanation, comments, or text outside the query.\nOnly output the SQL query.\n\n---\n\nYou can also generate queries to fetch database metadata such as:\n\n* Table names:\n  `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';`\n* Column names and types:\n  `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'your_table_name';`\n\n---\n\nWhen generating queries:\n\n* Always respect foreign key relationships and join related tables when needed to retrieve meaningful or complete information.\n* If a column is a foreign key, consider joining with the referenced table to get descriptive fields (e.g., product name instead of product\\_id).\n* Use appropriate table aliases for readability if joining multiple tables.\n* Ensure the query reflects the intent of the user's question, even if it requires joining across multiple related tables.\n* Ensure not to include ID fields instead specifically asked for.\n---\n\nBelow is information about the available tables in the database to help you write accurate queries:\n\n---\n\n**products**\n\n* product\\_id (PK)\n* product\\_name (text)\n* product\\_code (unique text)\n* category (text)\n* unit\\_price (numeric)\n  → Holds product details.\n\n**batches**\n\n* batch\\_id (PK)\n* product\\_id (FK → products.product\\_id)\n* lot\\_number (text)\n* production\\_date (date)\n* quantity\\_produced (int)\n  → Represents production batches of each product.\n\n**inventory**\n\n* inventory\\_id (PK)\n* product\\_id (FK → products.product\\_id)\n* warehouse (text)\n* quantity\\_available (int)\n  → Shows current stock available in different warehouses.\n\n**customers**\n\n* customer\\_id (PK)\n* name (text)\n* city (text)\n* contact\\_email (text)\n  → Stores customer details.\n\n**orders**\n\n* order\\_id (PK)\n* customer\\_id (FK → customers.customer\\_id)\n* product\\_id (FK → products.product\\_id)\n* order\\_date (date)\n* quantity\\_ordered (int)\n* status (text)\n  → Tracks customer orders.\n\n---\n\nAlways output only a raw SQL query. Do not include any markdown formatting (like \\`\\`\\`sql), comments, or extra explanation — just the query.\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -128,
+        -96
+      ],
+      "id": "4fad7b43-5e97-467b-84d0-3a494e2f4153",
+      "name": "AI Agent",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        192
+      ],
+      "id": "f3fd2ada-9fd8-4644-a9e4-35ebd2706dc6",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "iKUtuur8NNbhTn4v",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -112,
+        192
+      ],
+      "id": "29a55d4a-8e32-4704-9658-94d1f5bf8ff5",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $input.item.json.output }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        448,
+        -96
+      ],
+      "id": "1c02907d-9200-468f-812e-2e5dab3acdc7",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "w7v1pTxSCKysEfIL",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst updatedItems = items.map((item) => {\n  let query = item?.json?.output;\n\n  if (!query) return item;\n\n  // Step 1: Remove triple backticks + optional 'sql'\n  query = query.replace(/^```sql\\\\n|^```sql\\n|^```sql\\r\\n/, \"\")\n               .replace(/\\\\n```$|\\n```$|\\r\\n```$/, \"\");\n\n  // Step 2: Unescape \\n → real newlines\n  query = query.replace(/\\\\n/g, \"\\n\").trim();\n\n  // Step 3: Convert table name to TitleCase and wrap in quotes\n  const upperQuery = query.toUpperCase();\n  if (upperQuery.startsWith(\"SELECT\") && query.trim().endsWith(\";\")) {\n    const fromIndex = upperQuery.indexOf(\"FROM\");\n    if (fromIndex !== -1) {\n      const tableNameStart = fromIndex + 5;\n      const tableNameEnd = query.indexOf(\" \", tableNameStart);\n      const tableName = query.slice(\n        tableNameStart,\n        tableNameEnd !== -1 ? tableNameEnd : query.length - 1\n      ).trim();\n\n      // const titleCaseTableName = `\"${tableName.charAt(0).toUpperCase() + tableName.slice(1).toLowerCase()}\"`;\n\n      //query = query.replace(tableName, titleCaseTableName);\n    }\n  }\n\n  // Step 4: Clean up spacing\n  item.json.output = query.replace(/\\s+/g, \" \").trim();\n  return item;\n});\n\nreturn updatedItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -96
+      ],
+      "id": "9faeeec4-424b-4fa5-998b-ca59e8e6aebd",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a helpful assistant that transforms SQL query results into clear, professional summaries for end users. Given the following input:\njson\n{{ $json[\"summaryInput\"] }}\nGenerate a well-structured summary with the following components: 1. 📋 **Summary Explanation** Provide a concise explanation of what the returned data represents. \n\n2. 🧠 **Analytics** Provide analytics on the datato find patterns.\n\n3. 📊 **Formatted Results Table** Display the raw SQL results in a clean and readable Markdown table, ensuring: \n* Proper column headers \n* Neat alignment \n* No truncation or overflow \n* Added Padding and Extra Spacing between columns !IMPORTANT \n* Add spacing after data\n* Convert column headers to Title Case Ensure the entire response is well-formatted, user-friendly, and suitable for presentation or reporting purposes. The output is intended for markdown  ",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        928,
+        -96
+      ],
+      "id": "daaddc3f-c6e7-4bb0-973c-6e65e79678f5",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        880,
+        192
+      ],
+      "id": "d09b4a76-f3b8-4ce8-be02-176eec00c86c",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "iKUtuur8NNbhTn4v",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// Flatten each row to a readable format\nconst rows = items.map((item, index) => {\n  const row = item.json;\n  const readable = Object.entries(row)\n    .map(([key, value]) => `**${key}**: ${value}`)\n    .join(', ');\n  return `Row ${index + 1}: ${readable}`;\n});\n\nreturn [\n  {\n    json: {\n      summaryInput: rows.join('\\n')\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -96
+      ],
+      "id": "6ae26015-9673-4771-a74b-bc5c81d56ea3",
+      "name": "Code1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        []
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b1428983-1663-474f-8737-8218d335e7e4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "041eb105950d84c4694bbe326afa775fc7ae66e0497f62a5d44eacaffc4fd301"
+  },
+  "id": "Qhw9KZ8mB79H7Vr0",
+  "tags": []
+}
