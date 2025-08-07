@@ -97,7 +97,7 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        1320,
+        1248,
         -544
       ],
       "id": "da46dfa7-9b3f-4f2c-818b-977b88c01240",
@@ -111,7 +111,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\n\nvar temp = items.map((item)=>{\n  return item.json.rows;\n});\n\n// Flatten each row to a readable format\n// const rows = temp.map((item, index) => {\n//   const row = item;\n//   const readable = Object.entries(row)\n//     .map(([key, value]) => `**${key}**: ${value}`)\n//     .join(', ');\n//   return `Row ${index + 1}: ${readable}`;\n// });\n\nreturn [\n  {\n    json: {\n      \n      rows: temp[0]\n    }\n  }\n];\n"
+        "jsCode": "const items = $input.all();\n\nvar temp = items.map((item)=>{\n  return item.json.results;\n});\n\n// Flatten each row to a readable format\n// const rows = temp.map((item, index) => {\n//   const row = item;\n//   const readable = Object.entries(row)\n//     .map(([key, value]) => `**${key}**: ${value}`)\n//     .join(', ');\n//   return `Row ${index + 1}: ${readable}`;\n// });\n\nreturn [\n  {\n    json: {\n      \n      rows: temp[0]\n    }\n  }\n];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -124,22 +124,26 @@
     },
     {
       "parameters": {
-        "query": "={{$json.output}}"
+        "url": "http://127.0.0.1:8000/db-direct?",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{$json.output}}"
+            }
+          ]
+        },
+        "options": {}
       },
-      "type": "CUSTOM.Oracle Database with Parameterization",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         800,
         -768
       ],
-      "id": "629df178-6bd0-4cdf-8808-f68f8edc62f5",
-      "name": "Oracle Database",
-      "credentials": {
-        "oracleCredentials": {
-          "id": "L8qsP6ofOT47C0k2",
-          "name": "Oracle Credentials account"
-        }
-      }
+      "id": "61b84882-7d8c-4d2b-90a4-53f571cab190",
+      "name": "HTTP Request"
     }
   ],
   "pinData": {},
@@ -192,7 +196,7 @@
       "main": [
         [
           {
-            "node": "Oracle Database",
+            "node": "HTTP Request",
             "type": "main",
             "index": 0
           }
@@ -221,7 +225,7 @@
         ]
       ]
     },
-    "Oracle Database": {
+    "HTTP Request": {
       "main": [
         [
           {
@@ -237,7 +241,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "e936a710-1fbe-4997-9eee-93082a501d05",
+  "versionId": "20ac0b53-46ce-4dcc-88b6-230d8f93ad7a",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "90b808ffc3b7e9f6683045420eea737c695b5d4180e3671bdfecba258b0078d2"
