@@ -9,7 +9,7 @@
       "typeVersion": 1.1,
       "position": [
         0,
-        0
+        -768
       ],
       "id": "1fc1e2c7-ea9a-4d09-b40a-511333ed6960",
       "name": "When chat message received",
@@ -24,8 +24,8 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.1,
       "position": [
-        320,
-        0
+        224,
+        -768
       ],
       "id": "902b8748-198f-4cc1-887f-0cbcfb52011c",
       "name": "AI Agent",
@@ -38,8 +38,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        160,
-        288
+        232,
+        -544
       ],
       "id": "6d4d2b7b-c95b-4800-882a-270c72102f7b",
       "name": "Google Gemini Chat Model",
@@ -55,27 +55,11 @@
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1.3,
       "position": [
-        336,
-        288
+        360,
+        -544
       ],
       "id": "e136ba1e-5b4c-4240-93cf-046aea4a899e",
       "name": "Simple Memory"
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "{{ $input.item.json.output }}\n",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        880,
-        368
-      ],
-      "id": "1d8ddaf9-7913-4053-ba02-5afb37b071ad",
-      "name": "Execute a SQL query",
-      "disabled": true
     },
     {
       "parameters": {
@@ -84,8 +68,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        672,
-        0
+        576,
+        -768
       ],
       "id": "bdb391dc-0265-4a15-8561-2e1363894ba2",
       "name": "Code"
@@ -93,14 +77,14 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are a helpful assistant that transforms SQL query results into clear, professional summaries for end users. Given the following input:\njson\n{{ $json[\"summaryInput\"] }}\nGenerate a well-structured summary with the following components: 1. 📋 **Summary Explanation** Provide a concise explanation of what the returned data represents. \n\n2. 🧠 **Analytics** Provide analytics on the datato find patterns.\n\n3. 📊 **Formatted Results Table** Display the raw SQL results in a clean and readable Markdown table, ensuring: \n* Proper column headers \n* Neat alignment \n* No truncation or overflow \n* Added Padding and Extra Spacing between columns !IMPORTANT \n* Add spacing after data\n* Convert column headers to Title Case Ensure the entire response is well-formatted, user-friendly, and suitable for presentation or reporting purposes. The output is intended for markdown  ",
+        "text": "=You are a helpful assistant that transforms SQL query results into clear, professional summaries for end users. Given the following input:\nobjects\n{{ Columns = $json[\"rows\"].last().keys()}}\n{{ Values = $json[\"rows\"].map((item)=> item.values()); \n  \n}}\n\nGenerate a well-structured summary with the following components: 1. 📋 **Summary Explanation** Provide a concise explanation of what the returned data represents. \n\n2. 🧠 **Analytics** Provide analytics on the datato find patterns.\n\n3. 📊 **Formatted Results Table** Display the raw SQL results in a clean and readable Markdown table, ensuring: \n* Proper column headers \n* Neat alignment \n* No truncation or overflow \n* Added Padding and Extra Spacing between columns !IMPORTANT \n* Add spacing after data\n* Convert column headers to Title Case Ensure the entire response is well-formatted, user-friendly, and suitable for presentation or reporting purposes. The output is intended for markdown  ",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.1,
       "position": [
-        1376,
-        0
+        1248,
+        -768
       ],
       "id": "67c2c9bd-913d-47a7-ac2f-b2b0bc91462b",
       "name": "AI Agent1"
@@ -113,8 +97,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        1328,
-        288
+        1320,
+        -544
       ],
       "id": "da46dfa7-9b3f-4f2c-818b-977b88c01240",
       "name": "Google Gemini Chat Model1",
@@ -127,13 +111,13 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\n\n// Flatten each row to a readable format\nconst rows = items.map((item, index) => {\n  const row = item.json;\n  const readable = Object.entries(row)\n    .map(([key, value]) => `**${key}**: ${value}`)\n    .join(', ');\n  return `Row ${index + 1}: ${readable}`;\n});\n\nreturn [\n  {\n    json: {\n      summaryInput: rows.join('\\n')\n    }\n  }\n];\n"
+        "jsCode": "const items = $input.all();\n\nvar temp = items.map((item)=>{\n  return item.json.rows;\n});\n\n// Flatten each row to a readable format\n// const rows = temp.map((item, index) => {\n//   const row = item;\n//   const readable = Object.entries(row)\n//     .map(([key, value]) => `**${key}**: ${value}`)\n//     .join(', ');\n//   return `Row ${index + 1}: ${readable}`;\n// });\n\nreturn [\n  {\n    json: {\n      \n      rows: temp[0]\n    }\n  }\n];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1136,
-        0
+        1024,
+        -768
       ],
       "id": "174d619c-8079-435e-9568-4f4a489d2c8d",
       "name": "Code1"
@@ -145,8 +129,8 @@
       "type": "CUSTOM.Oracle Database with Parameterization",
       "typeVersion": 1,
       "position": [
-        896,
-        -16
+        800,
+        -768
       ],
       "id": "629df178-6bd0-4cdf-8808-f68f8edc62f5",
       "name": "Oracle Database",
@@ -156,26 +140,6 @@
           "name": "Oracle Credentials account"
         }
       }
-    },
-    {
-      "parameters": {
-        "query": "select user_tables from"
-      },
-      "type": "CUSTOM.Oracle Database with Parameterization",
-      "typeVersion": 1,
-      "position": [
-        1104,
-        224
-      ],
-      "id": "063dd569-c309-4b50-b848-8f7a5773b6a2",
-      "name": "Oracle Database1",
-      "credentials": {
-        "oracleCredentials": {
-          "id": "L8qsP6ofOT47C0k2",
-          "name": "Oracle Credentials account"
-        }
-      },
-      "disabled": true
     }
   ],
   "pinData": {},
@@ -235,11 +199,6 @@
         ]
       ]
     },
-    "Execute a SQL query": {
-      "main": [
-        []
-      ]
-    },
     "Google Gemini Chat Model1": {
       "ai_languageModel": [
         [
@@ -278,8 +237,9 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "89fd2b72-d070-4d03-b306-5f05d29a77e8",
+  "versionId": "e936a710-1fbe-4997-9eee-93082a501d05",
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "90b808ffc3b7e9f6683045420eea737c695b5d4180e3671bdfecba258b0078d2"
   },
   "id": "VdEhXZSWb3M6wi7Q",
